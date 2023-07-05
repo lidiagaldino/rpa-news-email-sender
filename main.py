@@ -35,7 +35,7 @@ class NewsEmailSender:
         self.msg['Subject'] = 'TOP NEWS' 
         self.msg['From'] = self.sender
         self.msg['To']=self.reciever
-        self.msg.attach(MIMEText(content, 'html'))
+        self.msg.attach(MIMEText(self.content, 'html'))
 
     def send_email(self):
         server = smtplib.SMTP(config['SERVER'], config['PORT'])
