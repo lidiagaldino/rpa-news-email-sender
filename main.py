@@ -9,56 +9,52 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-import datetime
+class NewsEmailSender:
+    def __init__(self):
+        self.sender = config['EMAIL_SENDER']
+        self.reciever = config['EMAIL_RECIEVER']
+        self.password = config['EMAIL_PASS']
+        self.url = config['URL']
+        self.content = ''
+        self.cnt = ''
+        self.msg = MIMEMultipart()
+    
+    def extract_news(self):
+        print('Extracting hacker news stories...')
+        self.cnt += ('<b>HN Top stories:</b>\n'+'<br>'+'-'*50+'<br>')
+        response = requests.get(self.url)
+        content = response.content
+        soup = BeautifulSoup(content, 'html.parser')
+        for i, tag in enumerate(soup.find_all('td', attrs={'class':'title','valign':''})):
+            self.cnt +=((str(i+1)+' :: '+tag.text + "\n" + '<br>') if tag.text!='More' else '')
+        self.content += self.cnt
+        self.content += ('<br>------<br>')
+        self.content += ('<br><br>End of message')
+    
+    def prepare_email(self):
+        self.msg['Subject'] = 'TOP NEWS' 
+        self.msg['From'] = self.sender
+        self.msg['To']=self.reciever
+        self.msg.attach(MIMEText(content, 'html'))
 
-now = datetime.datetime.now
+    def send_email(self):
+        server = smtplib.SMTP(config['SERVER'], config['PORT'])
+        server.set_debuglevel(1)
+        server.ehlo()
+        server.starttls()
+        server.login(self.sender, self.password)
+        server.sendmail(self.sender, self.reciever, self.msg.as_string())
+        server.quit()
+    
+    def run(self):
+        self.extract_news()
+        self.prepare_email()
+        self.send_email()
 
-content = ''
+bot = NewsEmailSender()
+bot.run()
 
 
-def extract_news(url):
-    print('Extracting hacker news stories...')
-    cnt = ''
-    cnt += ('<b>HN Top stories:</b>\n'+'<br>'+'-'*50+'<br>')
-    response = requests.get(url)
-    content = response.content
-    soup = BeautifulSoup(content, 'html.parser')
-    for i, tag in enumerate(soup.find_all('td', attrs={'class':'title','valign':''})):
-        cnt +=((str(i+1)+' :: '+tag.text + "\n" + '<br>') if tag.text!='More' else '')
-    return (cnt)
-
-cnt = extract_news('https://news.ycombinator.com/')
-content += cnt
-content += ('<br>------<br>')
-content += ('<br><br>End of message')
-
-print('Composing email...')
-
-SERVER='smtp.gmail.com'
-PORT=587
-FROM=config['EMAIL_SENDER']
-TO=config['EMAIL_RECIEVER']
-PASS=config['EMAIL_PASS']
-
-msg = MIMEMultipart()
-
-msg['Subject'] = 'TOP NEWS' 
-msg['From'] = FROM
-msg['To']=TO
-
-msg.attach(MIMEText(content, 'html'))
-
-print('Initiating server')
-
-server = smtplib.SMTP(SERVER, PORT)
-server.set_debuglevel(1)
-server.ehlo()
-server.starttls()
-server.login(FROM, PASS)
-server.sendmail(FROM, TO, msg.as_string())
-
-print('Email sent..')
-server.quit()
 
 
 
